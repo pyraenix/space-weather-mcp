@@ -1,0 +1,30 @@
+{
+  "name": "space-weather-mcp",
+  "version": "1.0.0",
+  "description": "MCP server connecting Kiro to NASA APOD and OpenMeteo Weather APIs for space-aware weather briefings",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "demo": "npx tsx demo/generate-briefing.ts",
+    "web": "open web/index.html || xdg-open web/index.html"
+  },
+  "keywords": [
+    "mcp",
+    "nasa",
+    "weather",
+    "kiro",
+    "space"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.3.3"
+  }
+}

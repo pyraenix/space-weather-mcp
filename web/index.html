@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Weather Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0d1b2a 100%);
+      color: #e0e0e0;
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      padding: 1rem 1.5rem;
+      gap: 0.75rem;
+    }
+
+    header { text-align: center; }
+
+    header h1 {
+      font-size: 1.6rem;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p { color: #64748b; font-size: 0.8rem; }
+
+    .search-bar {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .search-bar input {
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      width: 240px;
+      outline: none;
+    }
+
+    .search-bar input:focus { border-color: #60a5fa; }
+
+    .search-bar button {
+      padding: 0.5rem 1.5rem;
+      border-radius: 9999px;
+      border: none;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .search-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0.75rem;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card h2 {
+      font-size: 0.8rem;
+      color: #93c5fd;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .card h2 .icon { font-size: 1rem; color: #a78bfa; }
+
+    /* APOD Card - spans 2 rows on left */
+    .card-apod {
+      grid-row: 1 / 3;
+    }
+
+    .apod-image {
+      width: 100%;
+      border-radius: 0.5rem;
+      flex: 1;
+      min-height: 0;
+      object-fit: cover;
+    }
+
+    .apod-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-top: 0.5rem;
+      line-height: 1.3;
+    }
+
+    .apod-credit {
+      font-size: 0.7rem;
+      color: #64748b;
+    }
+
+    /* Weather Card */
+    .weather-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .weather-item {
+      text-align: center;
+      padding: 0.4rem;
+      background: rgba(51, 65, 85, 0.5);
+      border-radius: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .weather-item .value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .weather-item .value-icon {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .weather-item .label {
+      font-size: 0.65rem;
+      color: #64748b;
+    }
+
+    /* Stargazing Card */
+    .stargazing-content {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .score-ring {
+      width: 100px;
+      height: 100px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .score-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .score-ring .bg { fill: none; stroke: #1e293b; stroke-width: 10; }
+    .score-ring .fg { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+
+    .score-ring .score-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .score-ring .score-number { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; }
+    .score-ring .score-label { font-size: 0.6rem; color: #64748b; }
+
+    .factors-list {
+      list-style: none;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      color: #cbd5e1;
+      overflow: hidden;
+    }
+
+    /* Forecast Card */
+    .card-forecast { grid-column: 2 / 4; }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.4rem;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .forecast-day {
+      text-align: center;
+      padding: 0.4rem 0.2rem;
+      background: rgba(51, 65, 85, 0.4);
+      border-radius: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+    }
+
+    .forecast-day .day { font-size: 0.7rem; font-weight: 600; color: #e2e8f0; }
+    .forecast-day .weather-icon { font-size: 1.2rem; line-height: 1; }
+    .forecast-day .temp { font-size: 0.7rem; color: #60a5fa; font-weight: 600; }
+    .forecast-day .low { font-size: 0.65rem; color: #64748b; }
+
+    footer {
+      text-align: center;
+      color: #334155;
+      font-size: 0.7rem;
+    }
+
+    .loading {
+      grid-column: 1 / -1;
+      grid-row: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+    }
+
+    .loading .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #334155;
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error {
+      grid-column: 1 / -1;
+      grid-row: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #dc2626;
+      border-radius: 0.75rem;
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Space Weather Dashboard</h1>
+      <p>Powered by Space Weather MCP — NASA APOD + OpenMeteo</p>
+    </header>
+
+    <div class="search-bar">
+      <input type="text" id="cityInput" placeholder="Enter a city..." value="Seattle" />
+      <button id="fetchBtn" onclick="fetchAll()">Get Briefing</button>
+    </div>
+
+    <div class="dashboard" id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Enter a city and click "Get Briefing"</p>
+      </div>
+    </div>
+
+    <footer>Space Weather MCP — Kiro Birthday Challenge Day 5</footer>
+  </div>
+
+  <script>
+    const NASA_API_KEY = 'DEMO_KEY';
+    const cityInput = document.getElementById('cityInput');
+    const fetchBtn = document.getElementById('fetchBtn');
+    const content = document.getElementById('content');
+
+    /**
+     * APOD Cache Strategy:
+     * NASA's DEMO_KEY has a strict rate limit (~30 req/hour). Since the Astronomy
+     * Picture of the Day only changes once per day, we cache it in localStorage
+     * keyed by today's date. This means:
+     * - First load of the day: one API call, then cached
+     * - All subsequent loads that day: instant, zero API calls
+     * - Next day: fresh fetch, new cache entry
+     * This eliminates rate-limit issues entirely for the demo.
+     */
+    const APOD_CACHE_KEY = 'apod_cache';
+
+    function getCachedApod() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(APOD_CACHE_KEY));
+        const today = new Date().toISOString().split('T')[0];
+        if (cached && cached.date === today && cached.data) {
+          return cached.data;
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    function setCachedApod(data) {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem(APOD_CACHE_KEY, JSON.stringify({ date: today, data }));
+      } catch(e) {}
+    }
+
+    async function fetchApod() {
+      // Check cache first — avoids rate limits since APOD only changes daily
+      const cached = getCachedApod();
+      if (cached) return cached;
+
+      // Not cached today — fetch fresh
+      const res = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`);
+      const data = await res.json();
+
+      if (data.error || !data.url) {
+        // API failed (rate limited) — return fallback
+        return getFallbackApod();
+      }
+
+      // If today's APOD is a video, use thumbnail or fallback to a known image
+      let apod;
+      if (data.media_type === 'video') {
+        apod = data.thumbnail_url
+          ? { ...data, media_type: 'image', url: data.thumbnail_url }
+          : getFallbackApod();
+      } else {
+        apod = data;
+      }
+
+      // Cache for the rest of the day
+      setCachedApod(apod);
+      return apod;
+    }
+
+    function getFallbackApod() {
+      // A known good APOD image — used when the API is rate-limited or returns a video
+      // without a thumbnail. This ensures the dashboard always looks complete.
+      return {
+        title: 'The Dust Trail of Comet Tempel 2',
+        media_type: 'image',
+        url: 'https://apod.nasa.gov/apod/image/2607/10P_Tempel2_20260711_DEBartlett1024.jpg',
+        copyright: 'Dan Bartlett'
+      };
+    }
+
+    cityInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') fetchAll(); });
+
+    function weatherEmoji(code) {
+      if (code <= 1) return '<span style="color:#fbbf24">●</span>';
+      if (code <= 2) return '<span style="color:#94a3b8">◑</span>';
+      if (code <= 3) return '<span style="color:#64748b">●●</span>';
+      if (code <= 48) return '<span style="color:#94a3b8">≋</span>';
+      if (code <= 55) return '<span style="color:#60a5fa">⁘</span>';
+      if (code <= 65) return '<span style="color:#3b82f6">⁞</span>';
+      if (code <= 77) return '<span style="color:#c4b5fd">✻</span>';
+      if (code <= 82) return '<span style="color:#3b82f6">⁞⁞</span>';
+      return '<span style="color:#f59e0b">⚡</span>';
+    }
+
+    function weatherDesc(code) {
+      const map = {
+        0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',
+        45:'Foggy',48:'Rime fog',51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',
+        61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',
+        80:'Showers',81:'Mod. showers',82:'Heavy showers',95:'Thunderstorm',96:'Storm+hail',99:'Severe storm'
+      };
+      return map[code] || 'Unknown';
+    }
+
+    function getScoreColor(s) {
+      if (s >= 80) return '#22c55e';
+      if (s >= 60) return '#84cc16';
+      if (s >= 40) return '#eab308';
+      if (s >= 20) return '#f97316';
+      return '#ef4444';
+    }
+
+    function calcStargazing(c) {
+      let score = 100; const factors = [];
+      if (c.cloud_cover > 80) { score -= 60; factors.push('<span style="color:#ef4444">✗</span> Heavy clouds'); }
+      else if (c.cloud_cover > 50) { score -= 35; factors.push('<span style="color:#f59e0b">~</span> Moderate clouds'); }
+      else if (c.cloud_cover > 20) { score -= 15; factors.push('<span style="color:#eab308">~</span> Light clouds'); }
+      else factors.push('<span style="color:#22c55e">✓</span> Clear skies');
+      if (c.relative_humidity_2m > 85) { score -= 20; factors.push('<span style="color:#ef4444">✗</span> High humidity'); }
+      else if (c.relative_humidity_2m > 70) { score -= 10; factors.push('<span style="color:#f59e0b">~</span> Mod. humidity'); }
+      else factors.push('<span style="color:#22c55e">✓</span> Low humidity');
+      if (c.wind_speed_10m > 30) { score -= 20; factors.push('<span style="color:#ef4444">✗</span> Strong winds'); }
+      else if (c.wind_speed_10m > 15) { score -= 10; factors.push('<span style="color:#f59e0b">~</span> Mod. winds'); }
+      else factors.push('<span style="color:#22c55e">✓</span> Calm winds');
+      if (c.is_day) { score -= 30; factors.push('<span style="color:#f59e0b">~</span> Daytime — wait'); }
+      else factors.push('<span style="color:#22c55e">✓</span> Nighttime');
+      score = Math.max(0, Math.min(100, score));
+      const v = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : score >= 20 ? 'Poor' : 'Bad';
+      return { score, verdict: v, factors };
+    }
+
+    async function fetchAll() {
+      const city = cityInput.value.trim();
+      if (!city) return;
+      fetchBtn.disabled = true;
+      content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Fetching...</p></div>';
+
+      try {
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+        const geoData = await geoRes.json();
+        if (!geoData.results?.length) throw new Error(`City not found: ${city}`);
+        const geo = geoData.results[0];
+
+        const [weatherRes, apod] = await Promise.all([
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.latitude}&longitude=${geo.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,cloud_cover,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&timezone=auto&forecast_days=7`),
+          fetchApod()
+        ]);
+
+        const weather = await weatherRes.json();
+        const sg = calcStargazing(weather.current);
+
+        render(geo, weather, apod, sg);
+      } catch (err) {
+        content.innerHTML = `<div class="error">❌ ${err.message}</div>`;
+      } finally { fetchBtn.disabled = false; }
+    }
+
+    function render(geo, weather, apod, sg) {
+      const c = weather.current;
+      const d = weather.daily;
+      const circ = 2 * Math.PI * 40;
+      const offset = circ - (sg.score / 100) * circ;
+      const color = getScoreColor(sg.score);
+      const loc = `${geo.name}, ${geo.country}`;
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+      content.innerHTML = `
+        <div class="card card-apod">
+          <h2><span class="icon">◎</span> NASA Astronomy Picture of the Day</h2>
+          ${apod.media_type === 'image'
+            ? `<img class="apod-image" src="${apod.url}" alt="${apod.title}" />`
+            : `<img class="apod-image" src="https://apod.nasa.gov/apod/image/2607/10P_Tempel2_20260711_DEBartlett1024.jpg" alt="Comet Tempel 2" />`
+          }
+          <div class="apod-title">${apod.title || ''}</div>
+          ${(apod.copyright) ? `<div class="apod-credit">Credit: ${apod.copyright}</div>` : ''}
+        </div>
+
+        <div class="card">
+          <h2><span class="icon">◈</span> ${loc}</h2>
+          <div class="weather-grid">
+            <div class="weather-item"><div class="value">${c.temperature_2m}°</div><div class="label">Temp (°C)</div></div>
+            <div class="weather-item"><div class="value">${c.apparent_temperature}°</div><div class="label">Feels Like</div></div>
+            <div class="weather-item"><div class="value">${c.cloud_cover}%</div><div class="label">Clouds</div></div>
+            <div class="weather-item"><div class="value">${c.relative_humidity_2m}%</div><div class="label">Humidity</div></div>
+            <div class="weather-item"><div class="value">${c.wind_speed_10m}</div><div class="label">Wind km/h</div></div>
+            <div class="weather-item"><div class="value-icon">${weatherEmoji(c.weather_code)}</div><div class="label">${weatherDesc(c.weather_code)}</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="icon">✦</span> Stargazing</h2>
+          <div class="stargazing-content">
+            <div class="score-ring">
+              <svg viewBox="0 0 100 100">
+                <circle class="bg" cx="50" cy="50" r="40" />
+                <circle class="fg" cx="50" cy="50" r="40" stroke="${color}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" />
+              </svg>
+              <div class="score-text">
+                <div class="score-number">${sg.score}</div>
+                <div class="score-label">${sg.verdict}</div>
+              </div>
+            </div>
+            <ul class="factors-list">
+              ${sg.factors.map(f => `<li>${f}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+
+        <div class="card card-forecast">
+          <h2><span class="icon">▦</span> 7-Day Forecast</h2>
+          <div class="forecast-grid">
+            ${d.time.map((date, i) => {
+              const dt = new Date(date + 'T12:00:00');
+              const dayName = days[dt.getDay()];
+              return `<div class="forecast-day">
+                <div class="day">${dayName}</div>
+                <div class="weather-icon">${weatherEmoji(d.weather_code[i])}</div>
+                <div class="temp">${d.temperature_2m_max[i]}°</div>
+                <div class="low">${d.temperature_2m_min[i]}°</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

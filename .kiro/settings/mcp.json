@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "space-weather": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NASA_API_KEY": "${env:NASA_API_KEY}"
+      },
+      "disabled": false
+    }
+  }
+}
